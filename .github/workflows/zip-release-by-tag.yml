@@ -66,7 +66,7 @@ jobs:
         $dll_files = Get-ChildItem -Path './x64/Zip Release' -Filter '*.dll'
         Compress-Archive -Path $dll_files.FullName -DestinationPath './LibrariesTemp.zip'
 
-    # 6. 동일한 태그의 기존 Release 및 Remote Tag가 존재하면 삭제 (GitHub CLI 사용)
+    # 6. 동일한 태그의 기존 Release 및 Remote Tag가 존재하면 삭제
     - name: Delete Existing Release and Tag
       shell: pwsh
       run: |
@@ -74,10 +74,18 @@ jobs:
         $env:GH_TOKEN = "${{ secrets.GITHUB_TOKEN }}"
 
         Write-Host "Checking for existing release: $targetTag"
-        # 릴리스가 존재하면 삭제 (실패해도 프로세스가 멈추지 않도록 무시)
-        gh release delete $targetTag --yes --cleanup-tag 2>$null
+        
+        # 기존 릴리스가 존재하는지 확인
+        $releaseExists = gh release view $targetTag 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Existing release found. Deleting..."
+            gh release delete $targetTag --yes --cleanup-tag
+        } else {
+            Write-Host "No existing release found for $targetTag. Skipping delete."
+        }
 
-        Write-Host "Cleanup completed for tag: $targetTag"
+        # 성공 처리 강제 (exit code 초기화)
+        $global:LASTEXITCODE = 0
 
     # 7. 입력받은 태그 이름으로 Release 새로 생성 및 ZIP 업로드
     - name: Create GitHub Release and Upload Asset
