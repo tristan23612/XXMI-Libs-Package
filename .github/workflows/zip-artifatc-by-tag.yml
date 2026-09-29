@@ -24,7 +24,7 @@ jobs:
       shell: pwsh
       run: |
         # 원본 저장소 URL (필요 시 실제 upstream URL로 확인/수정)
-        $upstreamUrl = "https://github.com/3dmigoto/StereoVisionHacks.git"
+        $upstreamUrl = "https://github.com/SpectrumQT/XXMI-Libs-Package.git"
         $targetTag = "${{ inputs.tag_name }}"
 
         Write-Host "Adding upstream repository..."
