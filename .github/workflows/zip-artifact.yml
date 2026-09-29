@@ -1,0 +1,48 @@
+name: Dev Build (No Release, No Tag)
+
+on:
+  workflow_dispatch: # 수동 실행
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 태그 조회 스크립트 대신 기본 버전 헤더 생성
+    - name: Generate default version header
+      shell: pwsh
+      run: |
+        "#define VERSION_MAJOR 0`n#define VERSION_MINOR 0`n#define VERSION_PATCH 0`n#define VERSION_BUILD 0" | Out-File -FilePath .\version.generated.h -Encoding utf8
+
+    - name: Add MSBuild for VS2022 to PATH
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-version: '[17.0,18.0)'
+
+    - name: Build solution
+      run: >
+        msbuild StereoVisionHacks.sln
+        -property:Configuration="Zip Release"
+        -property:Platform=x64
+        -target:rebuild
+        -verbosity:minimal
+
+    - name: Zip DLLs
+      shell: pwsh
+      run: |
+        $dll_files = Get-ChildItem -Path './x64/Zip Release' -Filter '*.dll'
+        Compress-Archive -Path $dll_files.FullName -DestinationPath './LibrariesTemp.zip'
+
+    # GitHub Release 없이, Actions 실행 결과 페이지에서 다운로드하는 아티팩트로 업로드
+    - name: Upload Zip Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: XXMI-PACKAGE-DEV
+        path: './LibrariesTemp.zip'
