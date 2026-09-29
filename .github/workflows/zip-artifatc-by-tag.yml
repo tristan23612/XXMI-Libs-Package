@@ -23,18 +23,27 @@ jobs:
     - name: Fetch Upstream and Checkout Tag
       shell: pwsh
       run: |
-        # 원본 저장소 URL (필요 시 실제 upstream URL로 확인/수정)
-        $upstreamUrl = "https://github.com/SpectrumQT/XXMI-Libs-Package.git"
+        $upstreamUrl = "${{ github.event.repository.parent.clone_url }}"
         $targetTag = "${{ inputs.tag_name }}"
 
-        Write-Host "Adding upstream repository..."
+        if (-not $upstreamUrl) {
+            # parent URL 감지 실패 시 실제 upstream 저장소 주소를 직접 작성하세요.
+            $upstreamUrl = "https://github.com/원본작성자/원본레포이름.git"
+        }
+
+        Write-Host "Upstream URL: $upstreamUrl"
         git remote add upstream $upstreamUrl 2>$null
         
-        Write-Host "Fetching all tags from upstream..."
+        # 1. upstream의 태그 및 모든 이력 가져오기
+        git fetch upstream --tags --unshallow 2>$null
         git fetch upstream --tags
 
-        Write-Host "Checking out tag: $targetTag"
-        git checkout "refs/tags/$targetTag"
+        # 2. 태그 기반으로 임시 브랜치(build-target)를 생성하며 체크아웃
+        Write-Host "Checking out tag into a temporary branch: $targetTag"
+        git checkout -b "build-target" "refs/tags/$targetTag"
+
+        # 3. generate-version.ps1 스크립트가 태그를 인식할 수 있도록 local tag 동기화
+        git describe --tags
 
     # 3. MSBuild 환경 구성
     - name: Add MSBuild for VS2022 to PATH
